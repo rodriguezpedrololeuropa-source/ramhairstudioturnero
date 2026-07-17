@@ -10,10 +10,14 @@ import { useState, useEffect } from "react";
 const API = "https://script.google.com/macros/s/AKfycbw8-ZwQ23GvZufkXLMr_y-Pe49Md_PT4sS5DqiWCY8I0qy8-63E65rtvU2pIZSBI3Zw/exec";
 
 // ------- CONFIGURACION DEL LOCAL (edita esto a gusto) -------
-const HORA_INICIO = 9;        // abre 09:00
-const HORA_FIN = 20;          // ultimo turno arranca antes de las 20:00
+// Franjas de atencion: cada una es [desde, hasta]. El ultimo turno
+// arranca 30 min antes del cierre (ej: franja hasta 13:00 => ultimo turno 12:30).
+const FRANJAS = [
+  ["09:30", "13:00"],   // mañana
+  ["14:30", "21:30"],   // tarde
+];
 const INTERVALO_MIN = 30;     // duracion de cada turno en minutos
-const DIAS_CERRADOS = [0];    // 0=Domingo, 1=Lunes ... 6=Sabado
+const DIAS_CERRADOS = [0];    // 0=Domingo (abierto lunes a sabado)
 const DIAS_ADELANTE = 14;     // cuantos dias hacia adelante se puede reservar
 // ------------------------------------------------------------
 
@@ -51,11 +55,14 @@ async function fetchTurnos() {
 const normHora = h => String(h || "").slice(0, 5);
 const normFecha = f => String(f || "").slice(0, 10);
 
+const aMin = h => { const [hh, mm] = h.split(":").map(Number); return hh * 60 + mm; };
+const aHora = m => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+
 function genSlots() {
   const out = [];
-  for (let h = HORA_INICIO; h < HORA_FIN; h++) {
-    for (let m = 0; m < 60; m += INTERVALO_MIN) {
-      out.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
+  for (const [desde, hasta] of FRANJAS) {
+    for (let m = aMin(desde); m + INTERVALO_MIN <= aMin(hasta); m += INTERVALO_MIN) {
+      out.push(aHora(m));
     }
   }
   return out;
@@ -304,16 +311,26 @@ export default function App() {
               <div className="card fade-up">
                 <div className="card-title">3 — Elegi la hora</div>
                 {loading && <p className="cinzel" style={{ fontSize: 10, color: "#555", letterSpacing: ".15em", marginBottom: 12 }}>Cargando disponibilidad...</p>}
-                <div className="hora-grid">
-                  {slots.map(h => {
-                    const bloqueado = esOcupado(selFecha, h) || horaPasada(selFecha, h);
-                    return (
-                      <div key={h} className={`hora-card${selHora === h ? " active" : ""}${bloqueado ? " ocupado" : ""}`} onClick={() => !bloqueado && setSelHora(h)}>
-                        {h}
+                {FRANJAS.map(([desde, hasta]) => {
+                  const franjaSlots = slots.filter(h => aMin(h) >= aMin(desde) && aMin(h) < aMin(hasta));
+                  return (
+                    <div key={desde}>
+                      <div className="cinzel" style={{ fontSize: 9, letterSpacing: ".15em", color: "#555", textTransform: "uppercase", margin: "4px 0 8px" }}>
+                        {aMin(desde) < 13 * 60 ? "Mañana" : "Tarde"} · {desde} a {hasta}
                       </div>
-                    );
-                  })}
-                </div>
+                      <div className="hora-grid">
+                        {franjaSlots.map(h => {
+                          const bloqueado = esOcupado(selFecha, h) || horaPasada(selFecha, h);
+                          return (
+                            <div key={h} className={`hora-card${selHora === h ? " active" : ""}${bloqueado ? " ocupado" : ""}`} onClick={() => !bloqueado && setSelHora(h)}>
+                              {h}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
                 <div style={{ display: "flex", gap: 8 }}>
                   <button className="btn-ghost" style={{ flex: 1 }} onClick={() => setStep("fecha")}>Atras</button>
                   <button className={`btn-main${selHora ? "" : " dim"}`} style={{ flex: 2 }} onClick={() => selHora && setStep("datos")}>Continuar</button>
