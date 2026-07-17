@@ -19,6 +19,9 @@ const FRANJAS = [
 const INTERVALO_MIN = 30;     // duracion de cada turno en minutos
 const DIAS_CERRADOS = [0];    // 0=Domingo (abierto lunes a sabado)
 const DIAS_ADELANTE = 14;     // cuantos dias hacia adelante se puede reservar
+
+// WhatsApp de la barberia, con codigo de pais y sin +, espacios ni guiones.
+const WHATSAPP_BARBERIA = "5493513704782"; // +54 9 351 3 70 4782
 // ------------------------------------------------------------
 
 const SVCS = [
@@ -122,6 +125,8 @@ const css = `
   .dot{width:6px;height:6px;border-radius:50%;background:#1a1a1a;transition:all .4s;}
   .dot.done{background:#333;}
   .dot.active{background:#fff;}
+  .wa-float{position:fixed;bottom:18px;right:18px;z-index:60;width:54px;height:54px;border-radius:50%;background:#25D366;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(37,211,102,.35);transition:transform .25s;}
+  .wa-float:hover{transform:scale(1.08);}
   @media(max-width:380px){.hora-grid{grid-template-columns:repeat(3,1fr);}}
 `;
 
@@ -251,6 +256,15 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: "#000", position: "relative", overflow: "hidden" }}>
       <LogoSVG />
       <Logo />
+      <button
+        className="wa-float"
+        aria-label="Consultas por WhatsApp"
+        onClick={() => window.open(`https://wa.me/${WHATSAPP_BARBERIA}?text=${encodeURIComponent("Hola! Quiero hacer una consulta sobre RAM Hair Studio.")}`, "_blank")}
+      >
+        <svg viewBox="0 0 32 32" width="28" height="28" fill="#fff" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 3C9.4 3 4 8.3 4 14.9c0 2.6.8 5 2.3 7L4 29l7.3-2.3c1.9 1 4 1.6 6.2 1.6h.5c6.6 0 12-5.3 12-11.9C30 8.3 24.6 3 16 3zm.5 21.6h-.4c-1.9 0-3.8-.5-5.4-1.5l-.4-.2-4 1.3 1.3-3.9-.3-.4c-1.3-1.8-2-3.9-2-6 0-5.4 4.5-9.9 10.2-9.9 5.7 0 11.5 4.5 11.5 9.9 0 5.5-4.6 10.7-10.5 10.7zm5.6-7.5c-.3-.2-1.8-.9-2.1-1-.3-.1-.5-.2-.7.2-.2.3-.8 1-1 1.2-.2.2-.4.2-.7.1-.3-.2-1.3-.5-2.5-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.5.1-.6.1-.1.3-.4.5-.5.2-.2.2-.3.3-.5.1-.2.1-.4 0-.6-.1-.2-.7-1.7-1-2.3-.3-.6-.5-.5-.7-.5h-.6c-.2 0-.6.1-.9.4-.3.3-1.1 1.1-1.1 2.7s1.2 3.1 1.3 3.3c.2.2 2.3 3.5 5.5 4.9.8.3 1.4.5 1.8.7.8.2 1.5.2 2 .1.6-.1 1.8-.7 2.1-1.5.3-.7.3-1.3.2-1.5-.1-.1-.3-.2-.6-.4z"/>
+        </svg>
+      </button>
       <div style={{ maxWidth: 480, margin: "0 auto", padding: "0 16px 50px", position: "relative", zIndex: 1 }}>
 
         {listo ? (
@@ -262,6 +276,14 @@ export default function App() {
             <div className="cf-row"><span className="ck">Hora</span><span>{selHora} hs</span></div>
             <div className="cf-row"><span className="ck">Nombre</span><span>{nom}</span></div>
             <p style={{ fontSize: 11, color: "#555", margin: "18px 0" }}>Te esperamos. Si no podes venir, avisanos con anticipacion.</p>
+            <button
+              className="btn-main"
+              style={{ marginBottom: 8, background: "#0f2a1a", color: "#7ad4a8", border: "1px solid #1a3a2a" }}
+              onClick={() => {
+                const msg = `Hola! Soy ${nom}. Acabo de sacar turno en RAM Hair Studio:\n• ${svc?.label}\n• ${fechaSel ? `${fechaSel.dia} ${fechaSel.num} ${fechaSel.mes}` : selFecha} a las ${selHora} hs\nMi telefono: ${tel}`;
+                window.open(`https://wa.me/${WHATSAPP_BARBERIA}?text=${encodeURIComponent(msg)}`, "_blank");
+              }}
+            >Avisar por WhatsApp</button>
             <button className="btn-ghost" onClick={reiniciar}>Sacar otro turno</button>
           </div>
         ) : (
