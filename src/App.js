@@ -41,22 +41,48 @@ async function api(action, params = {}) {
 }
 
 async function fetchTurnos() {
-  // Si agregaste la accion "slots" en tu Apps Script (recomendado, ver LEEME),
-  // se usa esa. Si no existe, cae a leer la hoja TURNOS completa.
-  try {
-    const res = await fetch(`${API}?action=slots`);
-    const j = await res.json();
-    if (j && j.data) return j.data;
-  } catch (e) { /* sigue con fallback */ }
-  try {
-    const res = await fetch(`${API}?action=get&sheet=TURNOS`);
-    const j = await res.json();
-    return j.data || [];
-  } catch (e) { return []; }
+  // Prueba varias formas de pedirle los turnos al Apps Script,
+  // en orden: accion "slots" (si la agregaste, ver LEEME), y las
+  // variantes comunes de lectura de la hoja TURNOS.
+  const intentos = [
+    `${API}?action=slots`,
+    `${API}?action=get&sheet=TURNOS`,
+    `${API}?sheet=TURNOS`,
+  ];
+  for (const url of intentos) {
+    try {
+      const res = await fetch(url);
+      const j = await res.json();
+      const data = j && (j.data || (Array.isArray(j) ? j : null));
+      if (data && data.length !== undefined) return data;
+    } catch (e) { /* prueba el siguiente formato */ }
+  }
+  return [];
 }
 
-const normHora = h => String(h || "").slice(0, 5);
-const normFecha = f => String(f || "").slice(0, 10);
+// --- Normalizadores: Google Sheets a veces devuelve las fechas como
+// "2026-07-18T03:00:00.000Z" y las horas como "1899-12-30T13:00:00.000Z".
+// Esto las convierte siempre a "2026-07-18" y "13:00" para que la
+// comparacion con los horarios del turnero funcione y se bloqueen bien. ---
+const normFecha = v => {
+  if (!v) return "";
+  const s = String(v).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  const d = new Date(s);
+  if (!isNaN(d)) return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return s;
+};
+const normHora = v => {
+  if (v === null || v === undefined || v === "") return "";
+  const s = String(v).trim();
+  const m = s.match(/^(\d{1,2}):(\d{2})/);
+  if (m) return `${m[1].padStart(2, "0")}:${m[2]}`;
+  const d = new Date(s);
+  if (!isNaN(d)) return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  return s;
+};
 
 const aMin = h => { const [hh, mm] = h.split(":").map(Number); return hh * 60 + mm; };
 const aHora = m => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
@@ -194,6 +220,10 @@ export default function App() {
   const slots = genSlots();
 
   useEffect(() => { cargar(); }, []);
+
+  // Cada vez que el cliente llega al paso de la hora, recarga la
+  // disponibilidad desde la planilla por si alguien reservo recien.
+  useEffect(() => { if (step === "hora") cargar(); }, [step]);
 
   async function cargar() {
     setLoading(true);
