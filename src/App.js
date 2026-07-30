@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 //  y aparece automaticamente en el Turnero de tu panel.
 // ============================================================
 
-const API = "https://script.google.com/macros/s/AKfycbw8-ZwQ23GvZufkXLMr_y-Pe49Md_PT4sS5DqiWCY8I0qy8-63E65rtvU2pIZSBI3Zw/exec";
+const API = "https://script.google.com/macros/s/AKfycbzTfoOJo7VjznxdXrb89G2-ytDR-1oMVddZpGQu06pZlYq0Tr1QYaamj-UQYyiS8C0D/exec";
 
 // ------- CONFIGURACION DEL LOCAL (edita esto a gusto) -------
 // Franjas de atencion: cada una es [desde, hasta]. El ultimo turno
